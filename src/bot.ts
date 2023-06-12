@@ -344,7 +344,7 @@ export class Bot {
 						continue;
 					}
 
-					//await config.handleComment(comment, this);
+					await config.handleComment(comment, this);
 
 					await commentsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_COMMENTS_WORKER_WAIT_TIME);

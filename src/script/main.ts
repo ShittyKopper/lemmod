@@ -54,14 +54,14 @@ class Script {
 		if (!match) return;
 
 		const actions = this.actions.map(act => act.templateize(this.cfg, templateVariables).execute(bot, this.target));
-
 		await Promise.all(actions);
 	}
 
-	public async handleComment(post: CommentView, bot: Bot) {
-		if (!this.target.match(post)) return;
+	public async handleComment(comment: CommentView, bot: Bot) {
+		const [match, templateVariables] = this.target.match(comment);
+		if (!match) return;
 
-		const actions = this.actions.map(act => act.execute(bot, this.target));
+		const actions = this.actions.map(act => act.templateize(this.cfg, templateVariables).execute(bot, this.target));
 		await Promise.all(actions);
 	}
 }

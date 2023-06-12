@@ -15,7 +15,7 @@ export type OnPost = {
 	creator?: Creator;
 };
 
-export type OnComment = { new?: "comment"; body?: string; creator?: Creator };
+export type OnComment = { new?: "comment"; body?: Text; creator?: Creator };
 
 interface Creator {
 	admin?: boolean;
