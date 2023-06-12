@@ -7,30 +7,58 @@ const FETCH_LIMIT_MAX = 50;
 
 // we do need to take into account that we want to be almost instant with actions
 // while at the same time not hammering already struggling servers
-// assuming there will be more comments than posts
-const POST_WORKER_WAIT_TIME = 10 * 60 * 1000; // secs
-const BETWEEN_POSTS_WORKER_WAIT_TIME = 10 * 1000; // secs
-const BETWEEN_POST_PAGES_WORKER_WAIT_TIME = 20 * 1000; // secs
 
-const COMMENT_WORKER_WAIT_TIME = 15 * 60 * 1000; // secs
-const BETWEEN_COMMENTS_WORKER_WAIT_TIME = 5 * 60 * 1000; // secs
-const BETWEEN_COMMENT_PAGES_WORKER_WAIT_TIME = 10 * 60 * 1000; // secs
+const SECONDS = 1000;
+const MINUTES = 60 * SECONDS;
 
-const DM_WORKER_WAIT_TIME = 60 * 1000; // secs
-const BETWEEN_DMS_WORKER_WAIT_TIME = 5 * 1000; // secs
-const BETWEEN_DM_PAGES_WORKER_WAIT_TIME = 10 * 1000; // secs
+const POST_WORKER_WAIT_TIME = 5 * MINUTES;
+const BETWEEN_POSTS_WORKER_WAIT_TIME = 5 * SECONDS;
+const BETWEEN_POST_PAGES_WORKER_WAIT_TIME = 20 * SECONDS;
 
-const PERIODIC_WORKER_WAIT_TIME = 60 * 60 * 1000; // secs
+const COMMENT_WORKER_WAIT_TIME = 2 * MINUTES;
+const BETWEEN_COMMENTS_WORKER_WAIT_TIME = 5 * SECONDS;
+const BETWEEN_COMMENT_PAGES_WORKER_WAIT_TIME = 10 * SECONDS;
+
+const DM_WORKER_WAIT_TIME = 1 * MINUTES;
+const BETWEEN_DMS_WORKER_WAIT_TIME = 5 * SECONDS;
+const BETWEEN_DM_PAGES_WORKER_WAIT_TIME = 10 * SECONDS;
+
+const PERIODIC_WORKER_WAIT_TIME = 10 * MINUTES;
 
 export class Bot {
 	private lemmy: LemmyHttp;
 	private db: sqlite.Database;
+
 	private jwt: string;
 
 	constructor(lemmy: LemmyHttp, db: sqlite.Database, jwt: string) {
 		this.lemmy = lemmy;
 		this.db = db;
 		this.jwt = jwt;
+	}
+
+	async syncFollows() {
+		console.info("syncFollows", "Synchronizing followed communities...");
+		const site = await this.lemmy.getSite({ auth: this.jwt });
+		const moderates = site.my_user?.moderates || [];
+		const follows = site.my_user?.follows || [];
+
+		const simplifiedModerates = moderates.map(m => m.community.id);
+		const simplifiedFollows = follows.map(f => f.community.id);
+
+		const followNotMod = simplifiedFollows.filter(x => !simplifiedModerates.includes(x));
+		for (const follow of followNotMod) {
+			const fullFollow = follows.find(f => f.community.id == follow);
+			console.info("syncFollows", "unfollowing", fullFollow?.community.name, "as we're not a mod anymore");
+			await this.lemmy.followCommunity({ auth: this.jwt, community_id: follow, follow: false });
+		}
+
+		const modNotFollow = simplifiedModerates.filter(x => !simplifiedFollows.includes(x));
+		for (const follow of modNotFollow) {
+			const fullFollow = follows.find(f => f.community.id == follow);
+			console.info("syncFollows", "following", fullFollow?.community.name, "as we're a mod now");
+			await this.lemmy.followCommunity({ auth: this.jwt, community_id: follow, follow: true });
+		}
 	}
 
 	async postsWorker() {
@@ -59,6 +87,11 @@ export class Bot {
 				});
 
 				console.debug("postsWorker", posts.posts.length, "posts to check");
+				if (posts.posts.length == 0) {
+					reachedEnd = true;
+					break;
+				}
+
 				for (const post of posts.posts) {
 					const dbObj = {
 						":instance": post.community.instance_id,
@@ -129,6 +162,11 @@ export class Bot {
 				});
 
 				console.debug("commentsWorker", comments.comments.length, "comments to check");
+				if (comments.comments.length == 0) {
+					reachedEnd = true;
+					break;
+				}
+
 				for (const comment of comments.comments) {
 					const dbObj = {
 						":instance": comment.community.instance_id,
@@ -250,10 +288,13 @@ export class Bot {
 				PRAGMA incremental_vacuum;
 				PRAGMA optimize;
 			`);
+
+			await this.syncFollows();
 		}
 	}
 
 	async start() {
+		await this.syncFollows();
 		await Promise.all([this.postsWorker(), this.commentsWorker(), this.dmsWorker(), this.periodicWorker()]);
 	}
 }

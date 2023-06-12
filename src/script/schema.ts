@@ -27,8 +27,8 @@ interface Creator {
 }
 
 interface Actions {
-	delete: null;
-	ban: null;
+	delete: string;
+	ban: string;
 	message: string;
 	report: string;
 	reply: string;
