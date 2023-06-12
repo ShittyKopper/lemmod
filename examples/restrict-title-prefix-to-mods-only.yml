@@ -1,0 +1,32 @@
+# Restrict the prefix [DEV] to community moderators only
+
+script:
+    - on:
+          new: post
+          title:
+              # This is a regular expression. Specifically the Javascript flavor of it.
+
+              # ^ signifies the start of the title, as we're just looking for the prefix.
+
+              # The square brackets surrounding DEV have been "escaped" by putting
+              # a \ before them. If we didn't do this, regex would see that as
+              # instructions and not literal square brackets.
+
+              # (?<title> ) means that we want to keep everything between these
+              # parenthesis (group in regex speak) in a regex "variable" named title.
+
+              # .* means we want to get everything from here until the end.
+              regex:
+                  match: ^\[DEV\](?<title>.*)
+
+                  # Keep the title group on hand as it will be used in actions.
+                  # Note that only named groups can be saved.
+                  save_groups:
+                      - title
+
+      actions:
+          # {{title}} refers to the regex group captured at on>name>regex.
+          # This is NOT the usual regex group replacement syntax. Instead,
+          # custom templating is used to make things simpler.
+          rename: "{{title}}"
+          message: Sorry, only moderators can tag posts as [DEV]

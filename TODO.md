@@ -1,0 +1,3 @@
+-   Track post edits
+    -   Really hard to do accurately without hammering the server. Consider asking Lemmy to make an api for that?
+-   Consider asking lemmy about a "posts/comments AFTER id xyz" endpoint. Pagination really is a bruh moment

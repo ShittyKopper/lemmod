@@ -1,3 +1,6 @@
 /.env
+/data
 /node_modules
 /out
+/src/script/schema.json
+/src/script/validate.js

@@ -1,0 +1,35 @@
+# Remove posts linking to to example.com
+
+# The contents of variables: are not special in any way. They are just there to
+# help you avoid writing repetitive text (like, say, a community's name) over and over
+# To prevent weird interactions, several variable names are forbidden:
+#   - post, comment, creator
+# If any new variables are created (via regex.save_groups: for example), they
+# "overwrite" the ones defined here, for that specific part.
+variables:
+    community: c/MyReallyCoolCommunity
+
+script:
+    - on:
+          new: post
+
+          url:
+              # "url" is special, in that it is automatically parsed into it's parts.
+              domain: example.com
+
+      actions:
+          delete:
+          message: Sorry, but {{community}} does not allow links to {{post.url.domain}}.
+
+    # Report posts linking to to example.net or example.org
+
+    - on:
+          new: post
+
+          url:
+              domain:
+                  regex:
+                      match: example.(net|org)
+
+      actions:
+          report: Pay attention to this post, it links to {{post.url.domain}}
