@@ -1,5 +1,6 @@
 import { CommentView, LemmyHttp, PostView } from "lemmy-js-client";
 import { LRUCache } from "lru-cache/min";
+import RE2 from "re2";
 import { Configuration } from "../main.js";
 import { OnComment, OnPost, Text } from "../schema.js";
 import { DeleteAction } from "./delete.js";
@@ -18,7 +19,7 @@ export class PostTarget implements ActionTarget {
 	private matcher: OnPost;
 	private cfg: Configuration;
 
-	private regexCache: LRUCache<string, RegExp, unknown>;
+	private regexCache: LRUCache<string, RE2, unknown>;
 
 	constructor(matcher: OnPost, cfg: Configuration) {
 		this.matcher = matcher;
@@ -107,7 +108,7 @@ export class PostTarget implements ActionTarget {
 		if (typeof a != "string" && "regex" in a && typeof b == "string") {
 			let regex = this.regexCache.get(a.regex.match);
 			if (!regex) {
-				regex = new RegExp(a.regex.match);
+				regex = new RE2(a.regex.match);
 				this.regexCache.set(a.regex.match, regex);
 			}
 
