@@ -23,10 +23,16 @@ export class BanAction implements Action<PostView | CommentView> {
 
 	templateize(cfg: Configuration, struct: { [key: string]: unknown }) {
 		if (!this.args.reason) return this;
-		return new BanAction({ reason: cfg.templated(this.args.reason, struct), expires: this.args.expires });
+		return new BanAction({
+			reason: cfg.templated(this.args.reason, struct),
+			expires: this.args.expires,
+		});
 	}
 
-	async execute(bot: Bot, target: ActionTarget<PostView | CommentView>): Promise<void> {
+	async execute(
+		bot: Bot,
+		target: ActionTarget<PostView | CommentView>
+	): Promise<void> {
 		const targetData = target.targetData();
 		await bot.lemmy.banFromCommunity({
 			auth: bot.jwt,

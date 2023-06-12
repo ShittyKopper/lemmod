@@ -9,6 +9,10 @@ export class LockAction implements Action<PostView> {
 	}
 
 	async execute(bot: Bot, target: ActionTarget<PostView>): Promise<void> {
-		await bot.lemmy.lockPost({ auth: bot.jwt, locked: true, post_id: target.targetData().post.id });
+		await bot.lemmy.lockPost({
+			auth: bot.jwt,
+			locked: true,
+			post_id: target.targetData().post.id,
+		});
 	}
 }

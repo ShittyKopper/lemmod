@@ -1,5 +1,9 @@
-export type Text = string | { regex: { match: string; save_groups?: string[] } };
-export type Url = Text | { hash?: Text; domain?: Text; path?: Text; query?: Text };
+export type Text =
+	| string
+	| { regex: { match: string; save_groups?: string[] } };
+export type Url =
+	| Text
+	| { hash?: Text; domain?: Text; path?: Text; query?: Text };
 
 export type Script = ScriptPost | ScriptComment;
 type ScriptPost = { on: OnPost; actions: Actions & PostActions };

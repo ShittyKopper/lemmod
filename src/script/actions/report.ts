@@ -15,7 +15,10 @@ export class ReportAction implements Action<PostView | CommentView> {
 		return new ReportAction(cfg.templated(this.message, struct));
 	}
 
-	async execute(bot: Bot, target: ActionTarget<PostView | CommentView>): Promise<void> {
+	async execute(
+		bot: Bot,
+		target: ActionTarget<PostView | CommentView>
+	): Promise<void> {
 		if (target instanceof PostTarget) {
 			await bot.lemmy.createPostReport({
 				auth: bot.jwt,

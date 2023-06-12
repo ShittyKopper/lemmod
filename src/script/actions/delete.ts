@@ -8,11 +8,22 @@ export class DeleteAction implements Action<PostView | CommentView> {
 		return this;
 	}
 
-	async execute(bot: Bot, target: ActionTarget<PostView | CommentView>): Promise<void> {
+	async execute(
+		bot: Bot,
+		target: ActionTarget<PostView | CommentView>
+	): Promise<void> {
 		if (target instanceof PostTarget) {
-			await bot.lemmy.deletePost({ auth: bot.jwt, deleted: true, post_id: target.targetData().post.id });
+			await bot.lemmy.deletePost({
+				auth: bot.jwt,
+				deleted: true,
+				post_id: target.targetData().post.id,
+			});
 		} else if (target instanceof CommentTarget) {
-			await bot.lemmy.deleteComment({ auth: bot.jwt, deleted: true, comment_id: target.targetData().comment.id });
+			await bot.lemmy.deleteComment({
+				auth: bot.jwt,
+				deleted: true,
+				comment_id: target.targetData().comment.id,
+			});
 		}
 	}
 }

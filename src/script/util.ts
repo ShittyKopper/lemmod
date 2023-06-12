@@ -5,7 +5,11 @@ import type { Text } from "./schema.js";
 
 const REGEX_CACHE: LRUCache<string, RE2, unknown> = new LRUCache({ max: 200 });
 
-export function templateizeText(cfg: Configuration, text: Text, struct: { [name: string]: unknown }) {
+export function templateizeText(
+	cfg: Configuration,
+	text: Text,
+	struct: { [name: string]: unknown }
+) {
 	if (typeof text == "string") {
 		text = cfg.templated(text, struct);
 	} else {
@@ -15,7 +19,10 @@ export function templateizeText(cfg: Configuration, text: Text, struct: { [name:
 	return text;
 }
 
-export function matchText(a: Text, b: Text): [boolean, { [regexGroupName: string]: string }] {
+export function matchText(
+	a: Text,
+	b: Text
+): [boolean, { [regexGroupName: string]: string }] {
 	const reGroups: { [key: string]: string } = {};
 
 	if (typeof a == "string" && typeof b == "string") {
@@ -36,7 +43,9 @@ export function matchText(a: Text, b: Text): [boolean, { [regexGroupName: string
 
 		if (a.regex.save_groups != undefined && results.groups != undefined) {
 			const groups = Object.keys(results.groups);
-			const groupSaved = groups.filter(k => a.regex.save_groups?.includes(k));
+			const groupSaved = groups.filter(k =>
+				a.regex.save_groups?.includes(k)
+			);
 			for (const k of groupSaved) {
 				reGroups[k] = results.groups[k];
 			}

@@ -2,7 +2,13 @@ import * as yaml from "js-yaml";
 import { CommentView, PostView } from "lemmy-js-client";
 import Mustache from "mustache";
 import { Bot } from "../bot.js";
-import { Action, CommentTarget, getActionByName, PostTarget, ActionTarget as Target } from "./actions/main.js";
+import {
+	Action,
+	CommentTarget,
+	getActionByName,
+	PostTarget,
+	ActionTarget as Target,
+} from "./actions/main.js";
 import { Script as ScriptSchema } from "./schema.js";
 
 interface ConfigurationFile {
@@ -53,7 +59,11 @@ class Script {
 		const [match, templateVariables] = this.target.match(post);
 		if (!match) return;
 
-		const actions = this.actions.map(act => act.templateize(this.cfg, templateVariables).execute(bot, this.target));
+		const actions = this.actions.map(act =>
+			act
+				.templateize(this.cfg, templateVariables)
+				.execute(bot, this.target)
+		);
 
 		try {
 			await Promise.all(actions);
@@ -66,7 +76,11 @@ class Script {
 		const [match, templateVariables] = this.target.match(comment);
 		if (!match) return;
 
-		const actions = this.actions.map(act => act.templateize(this.cfg, templateVariables).execute(bot, this.target));
+		const actions = this.actions.map(act =>
+			act
+				.templateize(this.cfg, templateVariables)
+				.execute(bot, this.target)
+		);
 
 		try {
 			await Promise.all(actions);
@@ -83,7 +97,9 @@ export class Configuration {
 
 	constructor(yamlSrc: string) {
 		this.yml = yamlSrc;
-		const config = yaml.load(this.yml, { schema: yaml.FAILSAFE_SCHEMA }) as ConfigurationFile;
+		const config = yaml.load(this.yml, {
+			schema: yaml.FAILSAFE_SCHEMA,
+		}) as ConfigurationFile;
 
 		this.variables = {};
 		if (config.variables) {
@@ -116,7 +132,9 @@ export class Configuration {
 	}
 
 	public async handlePost(post: PostView, bot: Bot) {
-		const handlers = this.scripts.filter(s => s.target instanceof PostTarget).map(scr => scr.handlePost(post, bot));
+		const handlers = this.scripts
+			.filter(s => s.target instanceof PostTarget)
+			.map(scr => scr.handlePost(post, bot));
 		await Promise.all(handlers);
 	}
 

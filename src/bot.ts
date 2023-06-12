@@ -49,7 +49,10 @@ export class Bot {
 		this.configCache = new LRUCache({ max: LRU_CACHE_MAX });
 	}
 
-	async getConfig(instance_id: number, community_id: number): Promise<Configuration | null> {
+	async getConfig(
+		instance_id: number,
+		community_id: number
+	): Promise<Configuration | null> {
 		const cached = this.configCache.get([instance_id, community_id]);
 		if (cached != undefined) {
 			return cached;
@@ -61,7 +64,9 @@ export class Bot {
 			);
 		}
 
-		const configurationYml = await this.configGetStmt.get<{ config: string }>({
+		const configurationYml = await this.configGetStmt.get<{
+			config: string;
+		}>({
 			":instance": instance_id,
 			":community": community_id,
 		});
@@ -86,18 +91,40 @@ export class Bot {
 		const simplifiedModerates = moderates.map(m => m.community.id);
 		const simplifiedFollows = follows.map(f => f.community.id);
 
-		const followNotMod = simplifiedFollows.filter(x => !simplifiedModerates.includes(x));
+		const followNotMod = simplifiedFollows.filter(
+			x => !simplifiedModerates.includes(x)
+		);
 		for (const follow of followNotMod) {
 			const fullFollow = follows.find(f => f.community.id == follow);
-			console.info("syncFollows", "unfollowing", fullFollow?.community.name, "as we're not a mod anymore");
-			await this.lemmy.followCommunity({ auth: this.jwt, community_id: follow, follow: false });
+			console.info(
+				"syncFollows",
+				"unfollowing",
+				fullFollow?.community.name,
+				"as we're not a mod anymore"
+			);
+			await this.lemmy.followCommunity({
+				auth: this.jwt,
+				community_id: follow,
+				follow: false,
+			});
 		}
 
-		const modNotFollow = simplifiedModerates.filter(x => !simplifiedFollows.includes(x));
+		const modNotFollow = simplifiedModerates.filter(
+			x => !simplifiedFollows.includes(x)
+		);
 		for (const follow of modNotFollow) {
 			const fullFollow = follows.find(f => f.community.id == follow);
-			console.info("syncFollows", "following", fullFollow?.community.name, "as we're a mod now");
-			await this.lemmy.followCommunity({ auth: this.jwt, community_id: follow, follow: true });
+			console.info(
+				"syncFollows",
+				"following",
+				fullFollow?.community.name,
+				"as we're a mod now"
+			);
+			await this.lemmy.followCommunity({
+				auth: this.jwt,
+				community_id: follow,
+				follow: true,
+			});
 		}
 	}
 
@@ -106,7 +133,11 @@ export class Bot {
 		const lines = content.trim().split("\n");
 
 		const reply = async (content: string) =>
-			await this.lemmy.createPrivateMessage({ auth: this.jwt, recipient_id: dm.creator.id, content });
+			await this.lemmy.createPrivateMessage({
+				auth: this.jwt,
+				recipient_id: dm.creator.id,
+				content,
+			});
 
 		if (lines.length < 1) {
 			await reply("Invalid DM command, please read the documentation.");
@@ -115,11 +146,16 @@ export class Bot {
 
 		const line = lines[0].trim();
 		if (!(line.startsWith("!") && line.includes("@"))) {
-			await reply("Invalid community format, please read the documentation.");
+			await reply(
+				"Invalid community format, please read the documentation."
+			);
 			return;
 		}
 
-		const resolved = await this.lemmy.resolveObject({ auth: this.jwt, q: line });
+		const resolved = await this.lemmy.resolveObject({
+			auth: this.jwt,
+			q: line,
+		});
 		const community = resolved.community?.community;
 
 		if (!community) {
@@ -127,11 +163,16 @@ export class Bot {
 			return;
 		}
 
-		const community2 = await this.lemmy.getCommunity({ auth: this.jwt, id: community.id });
+		const community2 = await this.lemmy.getCommunity({
+			auth: this.jwt,
+			id: community.id,
+		});
 		const moderators = community2.moderators;
 
 		const mod = moderators.find(
-			mod => mod.moderator.id == dm.creator.id && mod.moderator.instance_id == dm.creator.instance_id
+			mod =>
+				mod.moderator.id == dm.creator.id &&
+				mod.moderator.instance_id == dm.creator.instance_id
 		);
 
 		if (!mod) {
@@ -142,7 +183,8 @@ export class Bot {
 		const meMod = moderators.find(
 			mod =>
 				mod.moderator.id == this.me?.local_user_view.person.id &&
-				mod.moderator.instance_id == this.me.local_user_view.person.instance_id
+				mod.moderator.instance_id ==
+					this.me.local_user_view.person.instance_id
 		);
 
 		if (!meMod) {
@@ -151,8 +193,13 @@ export class Bot {
 		}
 
 		if (lines.length > 3) {
-			if (lines[1].trim() != "```" && lines[lines.length - 1].trim() != "```") {
-				await reply("Invalid DM command, please read the documentation.");
+			if (
+				lines[1].trim() != "```" &&
+				lines[lines.length - 1].trim() != "```"
+			) {
+				await reply(
+					"Invalid DM command, please read the documentation."
+				);
 				return;
 			}
 
@@ -172,7 +219,10 @@ export class Bot {
 					":config": configurationYml,
 				});
 
-				this.configCache.set([community.instance_id, community.id], configuration);
+				this.configCache.set(
+					[community.instance_id, community.id],
+					configuration
+				);
 				await reply(
 					`Community **${community.name}** is now using the following configuration:\n\`\`\`\n${configurationYml}\n\`\`\``
 				);
@@ -180,14 +230,21 @@ export class Bot {
 				// ok!
 			} catch (e) {
 				// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-				await reply(`An error occured while applying your config: ${e}`);
+				await reply(
+					`An error occured while applying your config: ${e}`
+				);
 				console.error("handleDM", "Error setting community config", e);
 				return;
 			}
 		} else {
-			const config = await this.getConfig(community.instance_id, community.id);
+			const config = await this.getConfig(
+				community.instance_id,
+				community.id
+			);
 			if (!config) {
-				await reply(`Community **${community.name}** does not have any configuration`);
+				await reply(
+					`Community **${community.name}** does not have any configuration`
+				);
 				return;
 			}
 
@@ -213,7 +270,13 @@ export class Bot {
 			let currentPage = 0;
 
 			while (!reachedEnd) {
-				console.info("postsWorker", "Getting next", FETCH_LIMIT_MAX, "posts in page", currentPage);
+				console.info(
+					"postsWorker",
+					"Getting next",
+					FETCH_LIMIT_MAX,
+					"posts in page",
+					currentPage
+				);
 
 				const posts = await this.lemmy.getPosts({
 					auth: this.jwt,
@@ -223,7 +286,11 @@ export class Bot {
 					page: currentPage,
 				});
 
-				console.debug("postsWorker", posts.posts.length, "posts to check");
+				console.debug(
+					"postsWorker",
+					posts.posts.length,
+					"posts to check"
+				);
 				if (posts.posts.length == 0) {
 					reachedEnd = true;
 					break;
@@ -251,9 +318,16 @@ export class Bot {
 
 					console.debug("postsWorker", "Found new post", post);
 
-					const config = await this.getConfig(post.community.instance_id, post.community.id);
+					const config = await this.getConfig(
+						post.community.instance_id,
+						post.community.id
+					);
 					if (!config) {
-						console.warn("Community", post.community.name, "has not uploaded a configuration.");
+						console.warn(
+							"Community",
+							post.community.name,
+							"has not uploaded a configuration."
+						);
 						continue;
 					}
 
@@ -301,7 +375,13 @@ export class Bot {
 			let currentPage = 0;
 
 			while (!reachedEnd) {
-				console.info("commentsWorker", "Getting next", FETCH_LIMIT_MAX, "comments in page", currentPage);
+				console.info(
+					"commentsWorker",
+					"Getting next",
+					FETCH_LIMIT_MAX,
+					"comments in page",
+					currentPage
+				);
 				const comments = await this.lemmy.getComments({
 					auth: this.jwt,
 					sort: "New",
@@ -310,7 +390,11 @@ export class Bot {
 					page: 1,
 				});
 
-				console.debug("commentsWorker", comments.comments.length, "comments to check");
+				console.debug(
+					"commentsWorker",
+					comments.comments.length,
+					"comments to check"
+				);
 				if (comments.comments.length == 0) {
 					reachedEnd = true;
 					break;
@@ -336,11 +420,22 @@ export class Bot {
 						break;
 					}
 
-					console.debug("commentsWorker", "Found new comment", comment);
+					console.debug(
+						"commentsWorker",
+						"Found new comment",
+						comment
+					);
 
-					const config = await this.getConfig(comment.community.instance_id, comment.community.id);
+					const config = await this.getConfig(
+						comment.community.instance_id,
+						comment.community.id
+					);
 					if (!config) {
-						console.warn("Community", comment.community.name, "has not uploaded a configuration.");
+						console.warn(
+							"Community",
+							comment.community.name,
+							"has not uploaded a configuration."
+						);
 						continue;
 					}
 
@@ -392,14 +487,24 @@ export class Bot {
 			let currentPage = 0;
 
 			while (!reachedEnd) {
-				console.info("dmsWorker", "Getting next", FETCH_LIMIT_MAX, "DMs in page", currentPage);
+				console.info(
+					"dmsWorker",
+					"Getting next",
+					FETCH_LIMIT_MAX,
+					"DMs in page",
+					currentPage
+				);
 				const dms = await this.lemmy.getPrivateMessages({
 					auth: this.jwt,
 					limit: FETCH_LIMIT_MAX,
 					page: currentPage,
 				});
 
-				console.debug("dmsWorker", dms.private_messages.length, "DMs to check");
+				console.debug(
+					"dmsWorker",
+					dms.private_messages.length,
+					"DMs to check"
+				);
 				if (dms.private_messages.length == 0) {
 					reachedEnd = true;
 					break;
@@ -413,7 +518,8 @@ export class Bot {
 
 					if (
 						dm.creator.id == this.me.local_user_view.person.id &&
-						dm.creator.instance_id == this.me.local_user_view.person.instance_id
+						dm.creator.instance_id ==
+							this.me.local_user_view.person.instance_id
 					)
 						continue;
 

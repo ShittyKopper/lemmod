@@ -18,7 +18,10 @@ export interface ActionTarget<TargetData> {
 }
 
 export interface Action<TargetData> {
-	templateize(cfg: Configuration, struct: { [key: string]: unknown }): Action<TargetData>;
+	templateize(
+		cfg: Configuration,
+		struct: { [key: string]: unknown }
+	): Action<TargetData>;
 	execute(bot: Bot, target: ActionTarget<TargetData>): Promise<void>;
 }
 
@@ -50,7 +53,10 @@ export class PostTarget implements ActionTarget<PostView> {
 		const templatedMatcher = this.matcher;
 
 		if (templatedMatcher.body != undefined) {
-			templatedMatcher.body = this.templateizeText(templatedMatcher.body, struct);
+			templatedMatcher.body = this.templateizeText(
+				templatedMatcher.body,
+				struct
+			);
 		}
 
 		if (templatedMatcher.creator != undefined) {
@@ -62,42 +68,72 @@ export class PostTarget implements ActionTarget<PostView> {
 			}
 
 			if (templatedMatcher.creator.name != undefined) {
-				templatedMatcher.creator.name = this.templateizeText(templatedMatcher.creator.name, struct);
+				templatedMatcher.creator.name = this.templateizeText(
+					templatedMatcher.creator.name,
+					struct
+				);
 			}
 		}
 
 		if (templatedMatcher.embed != undefined) {
 			if (templatedMatcher.embed.description != undefined) {
-				templatedMatcher.embed.description = this.templateizeText(templatedMatcher.embed.description, struct);
+				templatedMatcher.embed.description = this.templateizeText(
+					templatedMatcher.embed.description,
+					struct
+				);
 			}
 
 			if (templatedMatcher.embed.title != undefined) {
-				templatedMatcher.embed.title = this.templateizeText(templatedMatcher.embed.title, struct);
+				templatedMatcher.embed.title = this.templateizeText(
+					templatedMatcher.embed.title,
+					struct
+				);
 			}
 		}
 
 		if (templatedMatcher.title != undefined) {
-			templatedMatcher.title = this.templateizeText(templatedMatcher.title, struct);
+			templatedMatcher.title = this.templateizeText(
+				templatedMatcher.title,
+				struct
+			);
 		}
 
 		if (templatedMatcher.url != undefined) {
-			if (typeof templatedMatcher.url == "string" || "regex" in templatedMatcher.url) {
-				templatedMatcher.url = this.templateizeText(templatedMatcher.url, struct);
+			if (
+				typeof templatedMatcher.url == "string" ||
+				"regex" in templatedMatcher.url
+			) {
+				templatedMatcher.url = this.templateizeText(
+					templatedMatcher.url,
+					struct
+				);
 			} else {
 				if (templatedMatcher.url.domain != undefined) {
-					templatedMatcher.url.domain = this.templateizeText(templatedMatcher.url.domain, struct);
+					templatedMatcher.url.domain = this.templateizeText(
+						templatedMatcher.url.domain,
+						struct
+					);
 				}
 
 				if (templatedMatcher.url.hash != undefined) {
-					templatedMatcher.url.hash = this.templateizeText(templatedMatcher.url.hash, struct);
+					templatedMatcher.url.hash = this.templateizeText(
+						templatedMatcher.url.hash,
+						struct
+					);
 				}
 
 				if (templatedMatcher.url.path != undefined) {
-					templatedMatcher.url.path = this.templateizeText(templatedMatcher.url.path, struct);
+					templatedMatcher.url.path = this.templateizeText(
+						templatedMatcher.url.path,
+						struct
+					);
 				}
 
 				if (templatedMatcher.url.query != undefined) {
-					templatedMatcher.url.query = this.templateizeText(templatedMatcher.url.query, struct);
+					templatedMatcher.url.query = this.templateizeText(
+						templatedMatcher.url.query,
+						struct
+					);
 				}
 			}
 		}
@@ -135,7 +171,10 @@ export class PostTarget implements ActionTarget<PostView> {
 		const templatedMatcher = this.templateize(post);
 
 		if (templatedMatcher.body && post.body) {
-			const [match, reGroup] = matchText(templatedMatcher.body, post.body);
+			const [match, reGroup] = matchText(
+				templatedMatcher.body,
+				post.body
+			);
 			if (!match) return [false, {}];
 			templateVariables = { ...templateVariables, ...reGroup };
 		}
@@ -150,13 +189,22 @@ export class PostTarget implements ActionTarget<PostView> {
 			}
 
 			if (templatedMatcher.creator.name && post.creator?.name) {
-				const [match, reGroup] = matchText(templatedMatcher.creator?.name, post.creator.name);
+				const [match, reGroup] = matchText(
+					templatedMatcher.creator?.name,
+					post.creator.name
+				);
 				if (!match) return [false, {}];
 				templateVariables = { ...templateVariables, ...reGroup };
 			}
 
-			if (templatedMatcher.creator.display_name && post.creator?.display_name) {
-				const [match, reGroup] = matchText(templatedMatcher.creator?.display_name, post.creator.display_name);
+			if (
+				templatedMatcher.creator.display_name &&
+				post.creator?.display_name
+			) {
+				const [match, reGroup] = matchText(
+					templatedMatcher.creator?.display_name,
+					post.creator.display_name
+				);
 
 				if (!match) return [false, {}];
 				templateVariables = { ...templateVariables, ...reGroup };
@@ -165,58 +213,105 @@ export class PostTarget implements ActionTarget<PostView> {
 
 		if (templatedMatcher.embed) {
 			if (templatedMatcher.embed.description && post.embed?.description) {
-				const [match, reGroup] = matchText(templatedMatcher.embed.description, post.embed.description);
+				const [match, reGroup] = matchText(
+					templatedMatcher.embed.description,
+					post.embed.description
+				);
 				if (!match) return [false, {}];
 				templateVariables = { ...templateVariables, ...reGroup };
 			}
 
 			if (templatedMatcher.embed.title && post.embed?.title) {
-				const [match, reGroup] = matchText(templatedMatcher.embed.title, post.embed.title);
+				const [match, reGroup] = matchText(
+					templatedMatcher.embed.title,
+					post.embed.title
+				);
 				if (!match) return [false, {}];
 				templateVariables = { ...templateVariables, ...reGroup };
 			}
 		}
 
-		if (templatedMatcher.nsfw != undefined && post.nsfw != undefined && templatedMatcher.nsfw != post.nsfw) {
+		if (
+			templatedMatcher.nsfw != undefined &&
+			post.nsfw != undefined &&
+			templatedMatcher.nsfw != post.nsfw
+		) {
 			return [false, {}];
 		}
 
 		if (templatedMatcher.title && post.title) {
-			const [match, reGroup] = matchText(templatedMatcher.title, post.title);
+			const [match, reGroup] = matchText(
+				templatedMatcher.title,
+				post.title
+			);
 			if (!match) return [false, {}];
 			templateVariables = { ...templateVariables, ...reGroup };
 		}
 
 		if (templatedMatcher.url) {
-			if (typeof templatedMatcher.url == "string" || "regex" in templatedMatcher.url) {
+			if (
+				typeof templatedMatcher.url == "string" ||
+				"regex" in templatedMatcher.url
+			) {
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				const [match, reGroup] = matchText(templatedMatcher.url, input.post.url!); // fuck
+				const [match, reGroup] = matchText(
+					templatedMatcher.url,
+					input.post.url!
+				); // fuck
 				if (!match) return [false, {}];
 				templateVariables = { ...templateVariables, ...reGroup };
 			} else {
-				if (post.url && typeof post.url != "string" && "domain" in post.url) {
+				if (
+					post.url &&
+					typeof post.url != "string" &&
+					"domain" in post.url
+				) {
 					if (templatedMatcher.url.domain && post.url.domain) {
-						const [match, reGroup] = matchText(templatedMatcher.url.domain, post.url.domain);
+						const [match, reGroup] = matchText(
+							templatedMatcher.url.domain,
+							post.url.domain
+						);
 						if (!match) return [false, {}];
-						templateVariables = { ...templateVariables, ...reGroup };
+						templateVariables = {
+							...templateVariables,
+							...reGroup,
+						};
 					}
 
 					if (templatedMatcher.url.hash && post.url.hash) {
-						const [match, reGroup] = matchText(templatedMatcher.url.hash, post.url.hash);
+						const [match, reGroup] = matchText(
+							templatedMatcher.url.hash,
+							post.url.hash
+						);
 						if (!match) return [false, {}];
-						templateVariables = { ...templateVariables, ...reGroup };
+						templateVariables = {
+							...templateVariables,
+							...reGroup,
+						};
 					}
 
 					if (templatedMatcher.url.path && post.url.path) {
-						const [match, reGroup] = matchText(templatedMatcher.url.path, post.url.path);
+						const [match, reGroup] = matchText(
+							templatedMatcher.url.path,
+							post.url.path
+						);
 						if (!match) return [false, {}];
-						templateVariables = { ...templateVariables, ...reGroup };
+						templateVariables = {
+							...templateVariables,
+							...reGroup,
+						};
 					}
 
 					if (templatedMatcher.url.query && post.url.query) {
-						const [match, reGroup] = matchText(templatedMatcher.url.query, post.url.query);
+						const [match, reGroup] = matchText(
+							templatedMatcher.url.query,
+							post.url.query
+						);
 						if (!match) return [false, {}];
-						templateVariables = { ...templateVariables, ...reGroup };
+						templateVariables = {
+							...templateVariables,
+							...reGroup,
+						};
 					}
 				}
 			}
@@ -257,7 +352,10 @@ export class CommentTarget implements ActionTarget<CommentView> {
 		const templatedMatcher = this.matcher;
 
 		if (templatedMatcher.body != undefined) {
-			templatedMatcher.body = this.templateizeText(templatedMatcher.body, struct);
+			templatedMatcher.body = this.templateizeText(
+				templatedMatcher.body,
+				struct
+			);
 		}
 
 		if (templatedMatcher.creator != undefined) {
@@ -269,7 +367,10 @@ export class CommentTarget implements ActionTarget<CommentView> {
 			}
 
 			if (templatedMatcher.creator.name != undefined) {
-				templatedMatcher.creator.name = this.templateizeText(templatedMatcher.creator.name, struct);
+				templatedMatcher.creator.name = this.templateizeText(
+					templatedMatcher.creator.name,
+					struct
+				);
 			}
 		}
 
@@ -293,7 +394,10 @@ export class CommentTarget implements ActionTarget<CommentView> {
 		const templatedMatcher = this.templateize(comment);
 
 		if (templatedMatcher.body && comment.body) {
-			const [match, reGroup] = matchText(templatedMatcher.body, comment.body);
+			const [match, reGroup] = matchText(
+				templatedMatcher.body,
+				comment.body
+			);
 			if (!match) return [false, {}];
 			templateVariables = { ...templateVariables, ...reGroup };
 		}
@@ -308,12 +412,18 @@ export class CommentTarget implements ActionTarget<CommentView> {
 			}
 
 			if (templatedMatcher.creator.name && comment.creator?.name) {
-				const [match, reGroup] = matchText(templatedMatcher.creator?.name, comment.creator.name);
+				const [match, reGroup] = matchText(
+					templatedMatcher.creator?.name,
+					comment.creator.name
+				);
 				if (!match) return [false, {}];
 				templateVariables = { ...templateVariables, ...reGroup };
 			}
 
-			if (templatedMatcher.creator.display_name && comment.creator?.display_name) {
+			if (
+				templatedMatcher.creator.display_name &&
+				comment.creator?.display_name
+			) {
 				const [match, reGroup] = matchText(
 					templatedMatcher.creator?.display_name,
 					comment.creator.display_name

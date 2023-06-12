@@ -16,12 +16,18 @@ export class ReplyAction implements Action<PostView | CommentView> {
 		return new ReplyAction(cfg.templated(this.message, struct));
 	}
 
-	async execute(bot: Bot, target: ActionTarget<PostView | CommentView>): Promise<void> {
+	async execute(
+		bot: Bot,
+		target: ActionTarget<PostView | CommentView>
+	): Promise<void> {
 		const comment = await bot.lemmy.createComment({
 			auth: bot.jwt,
 			content: this.message,
 			post_id: target.targetData().post.id,
-			parent_id: target instanceof CommentTarget ? target.targetData().comment.id : undefined,
+			parent_id:
+				target instanceof CommentTarget
+					? target.targetData().comment.id
+					: undefined,
 		});
 
 		// doesn't work

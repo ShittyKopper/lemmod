@@ -15,8 +15,15 @@ export class MessageAction implements Action<PostView | CommentView> {
 		return new MessageAction(cfg.templated(this.message, struct));
 	}
 
-	async execute(bot: Bot, target: ActionTarget<PostView | CommentView>): Promise<void> {
+	async execute(
+		bot: Bot,
+		target: ActionTarget<PostView | CommentView>
+	): Promise<void> {
 		const creator_id = target.targetData().creator.id;
-		await bot.lemmy.createPrivateMessage({ auth: bot.jwt, recipient_id: creator_id, content: this.message });
+		await bot.lemmy.createPrivateMessage({
+			auth: bot.jwt,
+			recipient_id: creator_id,
+			content: this.message,
+		});
 	}
 }
