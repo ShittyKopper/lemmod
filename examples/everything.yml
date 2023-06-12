@@ -29,10 +29,7 @@ script:
               # Type: text
               description:
 
-              # Type: url
-              video_url:
-
-          # Type: url. The below options also apply to embed.video_url
+          # Type: url
           # You can also use anything supported by the "text" type, like regex on the
           # complete url.
           url:
@@ -64,9 +61,6 @@ script:
 
               # Type: text
               display_name:
-
-              # Type: text (instance domain)
-              instance:
 
       actions:
           # Common to posts & comments

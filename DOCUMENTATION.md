@@ -137,10 +137,7 @@ script:
               # Type: text
               description:
 
-              # Type: url
-              video_url:
-
-          # Type: url. The below options also apply to embed.video_url
+          # Type: url
           # You can also use anything supported by the "text" type, like regex,
           # on the complete url.
           url:
@@ -172,9 +169,6 @@ script:
 
               # Type: text
               display_name:
-
-              # Type: text (instance domain)
-              instance:
 
       actions:
           # Common to posts & comments
@@ -213,3 +207,7 @@ script:
     "Sort by edited" feed, that would make that easier to do.
 
     -   As such, the bot only works on new posts and comments.
+
+-   I couldn't find an easy way to convert between instance IDs and instance domains,
+    so can't filter by instance for now. Which is bad because it sounds like it'd
+    be really damn useful.

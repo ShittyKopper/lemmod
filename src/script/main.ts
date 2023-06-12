@@ -1,4 +1,5 @@
 import * as yaml from "js-yaml";
+import { CommentView, LemmyHttp, PostView } from "lemmy-js-client";
 import Mustache from "mustache";
 import { Action, CommentTarget, getActionByName, PostTarget, ActionTarget as Target } from "./actions/main.js";
 import { Script as ScriptSchema } from "./schema.js";
@@ -12,15 +13,15 @@ class Script {
 	private cfg: Configuration;
 
 	private actions: Action[];
-	private target: Target;
+	public target: Target;
 
 	constructor(script: ScriptSchema, cfg: Configuration) {
 		this.cfg = cfg;
 
 		if ("new" in script.on && script.on.new == "post") {
-			this.target = new PostTarget(script.on);
+			this.target = new PostTarget(script.on, cfg);
 		} else if ("new" in script.on && script.on.new == "comment") {
-			this.target = new CommentTarget(script.on);
+			this.target = new CommentTarget(script.on, cfg);
 		} else {
 			throw `Invalid action target`;
 		}
@@ -31,15 +32,38 @@ class Script {
 
 			let actionInit;
 			if (args != null) {
-				// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-ts-comment
 				// @ts-ignore
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				actionInit = new actionClass(args);
 			} else {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-ts-comment
+				// @ts-ignore
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				actionInit = new actionClass();
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 			this.actions.push(actionInit);
 		}
+	}
+
+	public async handlePost(post: PostView, lemmy: LemmyHttp) {
+		const [match, templateVariables] = this.target.match(post);
+		if (!match) return;
+
+		const actions = this.actions.map(act =>
+			act.templateize(this.cfg, templateVariables).execute(lemmy, this.target)
+		);
+
+		await Promise.all(actions);
+	}
+
+	public async handleComment(post: CommentView, lemmy: LemmyHttp) {
+		if (!this.target.match(post)) return;
+
+		const actions = this.actions.map(act => act.execute(lemmy, this.target));
+		await Promise.all(actions);
 	}
 }
 
@@ -74,7 +98,23 @@ export class Configuration {
 		this.scripts = config.script.map(scr => new Script(scr, this));
 	}
 
-	templated(text: string, additional: { [name: string]: string }): string {
+	templated(text: string, additional: { [name: string]: unknown }): string {
 		return Mustache.render(text, { ...this.variables, ...additional });
+	}
+
+	public async handlePost(post: PostView, lemmy: LemmyHttp) {
+		const handlers = this.scripts
+			.filter(s => s.target instanceof PostTarget)
+			.map(scr => scr.handlePost(post, lemmy));
+
+		await Promise.all(handlers);
+	}
+
+	public async handleComment(comment: CommentView, lemmy: LemmyHttp) {
+		const handlers = this.scripts
+			.filter(s => s.target instanceof CommentTarget)
+			.map(scr => scr.handleComment(comment, lemmy));
+
+		await Promise.all(handlers);
 	}
 }

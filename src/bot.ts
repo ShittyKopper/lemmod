@@ -1,9 +1,13 @@
 import { LemmyHttp } from "lemmy-js-client";
+import { LRUCache } from "lru-cache";
 import * as sqlite from "sqlite";
+import { Configuration } from "./script/main.js";
 import { sleep } from "./util.js";
 
 // https://github.com/LemmyNet/lemmy/blob/main/crates/db_schema/src/utils.rs#L36
 const FETCH_LIMIT_MAX = 50;
+
+const LRU_CACHE_MAX = 100;
 
 // we do need to take into account that we want to be almost instant with actions
 // while at the same time not hammering already struggling servers
@@ -31,10 +35,41 @@ export class Bot {
 
 	private jwt: string;
 
+	private configCache: LRUCache<[number, number], Configuration, unknown>;
+	private configGetStmt?: sqlite.Statement;
+
 	constructor(lemmy: LemmyHttp, db: sqlite.Database, jwt: string) {
 		this.lemmy = lemmy;
 		this.db = db;
 		this.jwt = jwt;
+
+		this.configCache = new LRUCache({ max: LRU_CACHE_MAX });
+	}
+
+	async getConfig(instance_id: number, community_id: number): Promise<Configuration | null> {
+		const cached = this.configCache.get([instance_id, community_id]);
+		if (cached != undefined) {
+			return cached;
+		}
+
+		if (!this.configGetStmt) {
+			this.configGetStmt = await this.db.prepare(
+				"SELECT config FROM community_configs WHERE instance_id = :instance AND community_id = :community;"
+			);
+		}
+
+		const configurationYml = await this.configGetStmt.get<{ config: string }>({
+			":instance": instance_id,
+			":community": community_id,
+		});
+
+		if (!configurationYml) {
+			return null;
+		}
+
+		const configuration = new Configuration(configurationYml?.config);
+		this.configCache.set([instance_id, community_id], configuration);
+		return configuration;
 	}
 
 	async syncFollows() {
@@ -110,6 +145,15 @@ export class Bot {
 					}
 
 					console.debug("postsWorker", "Found new post", post);
+
+					const config = await this.getConfig(post.community.instance_id, post.community.id);
+					if (!config) {
+						console.warn("Community", post.community.name, "has not uploaded a configuration.");
+						continue;
+					}
+
+					await config.handlePost(post, this.lemmy);
+
 					await postsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_POSTS_WORKER_WAIT_TIME);
 				}
@@ -185,6 +229,15 @@ export class Bot {
 					}
 
 					console.debug("commentsWorker", "Found new comment", comment);
+
+					const config = await this.getConfig(comment.community.instance_id, comment.community.id);
+					if (!config) {
+						console.warn("Community", comment.community.name, "has not uploaded a configuration.");
+						continue;
+					}
+
+					await config.handleComment(comment, this.lemmy);
+
 					await commentsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_COMMENTS_WORKER_WAIT_TIME);
 				}

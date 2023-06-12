@@ -1,5 +1,5 @@
-type Text = string | { regex: { match: string; save_groups?: string[] } };
-type Url = Text | { hash?: Text; domain?: Text; path?: Text; query?: Text };
+export type Text = string | { regex: { match: string; save_groups?: string[] } };
+export type Url = Text | { hash?: Text; domain?: Text; path?: Text; query?: Text };
 
 export type Script = ScriptPost | ScriptComment;
 type ScriptPost = { on: OnPost; actions: Actions & PostActions };
@@ -10,9 +10,9 @@ export type OnPost = {
 	title?: Text;
 	body?: Text;
 	nsfw?: boolean;
-	embed?: { title?: Text; description?: Text; url?: Url };
+	embed?: { title?: Text; description?: Text };
 	url?: Url;
-	creator: Creator;
+	creator?: Creator;
 };
 
 export type OnComment = { new?: "comment"; body?: string; creator?: Creator };
@@ -23,7 +23,6 @@ interface Creator {
 	local?: boolean;
 	name?: Text;
 	display_name?: Text;
-	instance?: Text;
 }
 
 interface Actions {
