@@ -1,6 +1,6 @@
 # lemmod
 
-Moderation bot for Lemmy communities.
+Extremely messy prototype of a moderation bot for Lemmy communities.
 
 ## How it works
 
@@ -10,10 +10,10 @@ Moderation bot for Lemmy communities.
 
 ## Scripts
 
-lemmod uses YAML with templating for it's scripts, which exchanges flexibility
-with security (i.e. you can safely host a public lemmod without worrying about
-getting pwned) and explicitly limited functionality (so mods can't easily
-instruct the bot to spam random communities or whatnot)
+lemmod uses YAML with (some) templating for it's scripts, which exchanges
+flexibility with security (i.e. you can safely host a public lemmod without
+worrying about getting pwned) and explicitly limited functionality (so mods
+can't easily instruct the bot to spam random communities or whatnot)
 
 YAML isn't REALLY the best tool for this job, but it's widely used and is easy
 to grasp (hi Nix)

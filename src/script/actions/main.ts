@@ -1,31 +1,44 @@
-import { CommentView, LemmyHttp, PostView } from "lemmy-js-client";
+import { CommentView, PostView } from "lemmy-js-client";
 import { LRUCache } from "lru-cache/min";
 import RE2 from "re2";
+import { Bot } from "../../bot.js";
 import { Configuration } from "../main.js";
 import { OnComment, OnPost, Text } from "../schema.js";
 import { DeleteAction } from "./delete.js";
+import { LockAction } from "./lock.js";
+import { MessageAction } from "./message.js";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ActionTarget {
+export interface ActionTarget<TargetData> {
 	match(input: unknown): [boolean, { [regexGroupName: string]: string }];
+	targetData(): TargetData;
 }
 
-export interface Action {
-	templateize(cfg: Configuration, struct: { [key: string]: unknown }): Action;
-	execute(lemmy: LemmyHttp, target: ActionTarget): Promise<void>;
+export interface Action<TargetData> {
+	templateize(cfg: Configuration, struct: { [key: string]: unknown }): Action<TargetData>;
+	execute(bot: Bot, target: ActionTarget<TargetData>): Promise<void>;
 }
 
-export class PostTarget implements ActionTarget {
+export class PostTarget implements ActionTarget<PostView> {
 	private matcher: OnPost;
 	private cfg: Configuration;
 
 	private regexCache: LRUCache<string, RE2, unknown>;
+
+	private data?: PostView;
 
 	constructor(matcher: OnPost, cfg: Configuration) {
 		this.matcher = matcher;
 		this.cfg = cfg;
 
 		this.regexCache = new LRUCache({ max: 50 });
+	}
+
+	targetData(): PostView {
+		if (!this.data) {
+			throw "targetData() called before match()";
+		}
+
+		return this.data;
 	}
 
 	templateizeText(text: Text, struct: OnPost): Text {
@@ -208,7 +221,7 @@ export class PostTarget implements ActionTarget {
 			}
 		}
 
-		if (templatedMatcher.nsfw != post.nsfw) {
+		if (templatedMatcher.nsfw != undefined && post.nsfw != undefined && templatedMatcher.nsfw != post.nsfw) {
 			return [false, {}];
 		}
 
@@ -253,17 +266,30 @@ export class PostTarget implements ActionTarget {
 			}
 		}
 
-		return [true, templateVariables];
+		this.data = input;
+
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore
+		return [true, { ...templateVariables, post }];
 	}
 }
 
-export class CommentTarget implements ActionTarget {
+export class CommentTarget implements ActionTarget<CommentView> {
 	private matcher: OnComment;
 	private cfg: Configuration;
+
+	private data?: CommentView;
 
 	constructor(matcher: OnComment, cfg: Configuration) {
 		this.matcher = matcher;
 		this.cfg = cfg;
+	}
+	targetData(): CommentView {
+		if (!this.data) {
+			throw "targetData() called before match()";
+		}
+
+		return this.data;
 	}
 
 	match(input: CommentView): [boolean, { [regexGroupName: string]: string }] {
@@ -275,6 +301,12 @@ export function getActionByName(name: string): unknown {
 	switch (name) {
 		case "delete":
 			return DeleteAction;
+
+		case "message":
+			return MessageAction;
+
+		case "lock":
+			return LockAction;
 
 		default:
 			throw `Unknown action "${name}"`;

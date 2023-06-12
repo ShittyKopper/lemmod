@@ -12,7 +12,7 @@ When you have done so, send a private message to the bot. The message should be
 in this exact format:
 
 ````
-@!community@example.com
+!community@example.com
 ```
 # your config here
 ```

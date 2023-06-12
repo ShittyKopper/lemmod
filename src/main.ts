@@ -37,7 +37,7 @@ async function main() {
 	const db = await initDB();
 
 	const client = new LemmyHttp(config.user.instance, {
-		"user-agent": "lemmod",
+		"user-agent": "lemmod/0.1.0 (by @ShittyKopper@lemmy.blahaj.zone)",
 	});
 
 	console.info("main", "Logging in as", config.user.username, "to", config.user.instance);

@@ -1,4 +1,4 @@
-import { LemmyHttp } from "lemmy-js-client";
+import { LemmyHttp, MyUserInfo, PrivateMessageView } from "lemmy-js-client";
 import { LRUCache } from "lru-cache";
 import * as sqlite from "sqlite";
 import { Configuration } from "./script/main.js";
@@ -15,28 +15,31 @@ const LRU_CACHE_MAX = 100;
 const SECONDS = 1000;
 const MINUTES = 60 * SECONDS;
 
-const POST_WORKER_WAIT_TIME = 5 * MINUTES;
+const POST_WORKER_WAIT_TIME = 2 * MINUTES;
 const BETWEEN_POSTS_WORKER_WAIT_TIME = 5 * SECONDS;
 const BETWEEN_POST_PAGES_WORKER_WAIT_TIME = 20 * SECONDS;
 
-const COMMENT_WORKER_WAIT_TIME = 2 * MINUTES;
+const COMMENT_WORKER_WAIT_TIME = 1 * MINUTES;
 const BETWEEN_COMMENTS_WORKER_WAIT_TIME = 5 * SECONDS;
 const BETWEEN_COMMENT_PAGES_WORKER_WAIT_TIME = 10 * SECONDS;
 
-const DM_WORKER_WAIT_TIME = 1 * MINUTES;
+const DM_WORKER_WAIT_TIME = 2 * MINUTES;
 const BETWEEN_DMS_WORKER_WAIT_TIME = 5 * SECONDS;
 const BETWEEN_DM_PAGES_WORKER_WAIT_TIME = 10 * SECONDS;
 
-const PERIODIC_WORKER_WAIT_TIME = 10 * MINUTES;
+const FAST_PERIODIC_WORKER_WAIT_TIME = 2 * MINUTES;
+const SLOW_PERIODIC_WORKER_WAIT_TIME = 10 * MINUTES;
 
 export class Bot {
-	private lemmy: LemmyHttp;
+	public lemmy: LemmyHttp;
+	public jwt: string;
+
 	private db: sqlite.Database;
-
-	private jwt: string;
-
 	private configCache: LRUCache<[number, number], Configuration, unknown>;
 	private configGetStmt?: sqlite.Statement;
+	private configSetStmt?: sqlite.Statement;
+
+	private me?: MyUserInfo;
 
 	constructor(lemmy: LemmyHttp, db: sqlite.Database, jwt: string) {
 		this.lemmy = lemmy;
@@ -75,8 +78,10 @@ export class Bot {
 	async syncFollows() {
 		console.info("syncFollows", "Synchronizing followed communities...");
 		const site = await this.lemmy.getSite({ auth: this.jwt });
-		const moderates = site.my_user?.moderates || [];
-		const follows = site.my_user?.follows || [];
+
+		this.me = site.my_user;
+		const moderates = this.me?.moderates || [];
+		const follows = this.me?.follows || [];
 
 		const simplifiedModerates = moderates.map(m => m.community.id);
 		const simplifiedFollows = follows.map(f => f.community.id);
@@ -93,6 +98,103 @@ export class Bot {
 			const fullFollow = follows.find(f => f.community.id == follow);
 			console.info("syncFollows", "following", fullFollow?.community.name, "as we're a mod now");
 			await this.lemmy.followCommunity({ auth: this.jwt, community_id: follow, follow: true });
+		}
+	}
+
+	async handleDM(dm: PrivateMessageView) {
+		const content = dm.private_message.content;
+		const lines = content.trim().split("\n");
+
+		const reply = async (content: string) =>
+			await this.lemmy.createPrivateMessage({ auth: this.jwt, recipient_id: dm.creator.id, content });
+
+		if (lines.length < 1) {
+			await reply("Invalid DM command, please read the documentation.");
+			return;
+		}
+
+		const line = lines[0].trim();
+		if (!(line.startsWith("!") && line.includes("@"))) {
+			await reply("Invalid community format, please read the documentation.");
+			return;
+		}
+
+		const resolved = await this.lemmy.resolveObject({ auth: this.jwt, q: line });
+		const community = resolved.community?.community;
+
+		if (!community) {
+			await reply("Unknown community.");
+			return;
+		}
+
+		const community2 = await this.lemmy.getCommunity({ auth: this.jwt, id: community.id });
+		const moderators = community2.moderators;
+
+		const mod = moderators.find(
+			mod => mod.moderator.id == dm.creator.id && mod.moderator.instance_id == dm.creator.instance_id
+		);
+
+		if (!mod) {
+			await reply("You are not a moderator of that community.");
+			return;
+		}
+
+		const meMod = moderators.find(
+			mod =>
+				mod.moderator.id == this.me?.local_user_view.person.id &&
+				mod.moderator.instance_id == this.me.local_user_view.person.instance_id
+		);
+
+		if (!meMod) {
+			await reply("I am not a moderator of that community.");
+			return;
+		}
+
+		if (lines.length > 3) {
+			if (lines[1].trim() != "```" && lines[lines.length - 1].trim() != "```") {
+				await reply("Invalid DM command, please read the documentation.");
+				return;
+			}
+
+			try {
+				const configurationYml = lines.slice(2, -1).join("\n");
+				const configuration = new Configuration(configurationYml);
+
+				if (!this.configSetStmt) {
+					this.configSetStmt = await this.db.prepare(
+						"INSERT OR REPLACE INTO community_configs(instance_id, community_id, config) VALUES (:instance, :community, :config);"
+					);
+				}
+
+				await this.configSetStmt.run({
+					":instance": community.instance_id,
+					":community": community.id,
+					":config": configurationYml,
+				});
+
+				this.configCache.set([community.instance_id, community.id], configuration);
+				await reply(
+					`Community **${community.name}** is now using the following configuration:\n\`\`\`\n${configurationYml}\n\`\`\``
+				);
+
+				// ok!
+			} catch (e) {
+				// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+				await reply(`An error occured while applying your config: ${e}`);
+				console.error("handleDM", "Error setting community config", e);
+				return;
+			}
+		} else {
+			const config = await this.getConfig(community.instance_id, community.id);
+			if (!config) {
+				await reply(`Community **${community.name}** does not have any configuration`);
+				return;
+			}
+
+			await reply(
+				`Community **${community.name}** is using the following configuration:\n\`\`\`\n${config.yml}\n\`\`\``
+			);
+			return;
 		}
 	}
 
@@ -133,6 +235,9 @@ export class Bot {
 						":post": post.post.id,
 					};
 
+					// Lemmy upvotes own posts by default IIRC
+					if (post.my_vote && post.my_vote > 0) return;
+
 					const ret = await postsCheckStmt.get<1>(dbObj);
 
 					if (ret) {
@@ -152,7 +257,7 @@ export class Bot {
 						continue;
 					}
 
-					await config.handlePost(post, this.lemmy);
+					await config.handlePost(post, this);
 
 					await postsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_POSTS_WORKER_WAIT_TIME);
@@ -217,6 +322,9 @@ export class Bot {
 						":comment": comment.comment.id,
 					};
 
+					// Lemmy upvotes own comments by default IIRC
+					if (comment.my_vote && comment.my_vote > 0) return;
+
 					const ret = await commentsCheckStmt.get<1>(dbObj);
 
 					if (ret) {
@@ -236,7 +344,7 @@ export class Bot {
 						continue;
 					}
 
-					await config.handleComment(comment, this.lemmy);
+					//await config.handleComment(comment, this);
 
 					await commentsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_COMMENTS_WORKER_WAIT_TIME);
@@ -273,6 +381,11 @@ export class Bot {
 			"INSERT INTO dms_checked(creator_id, message_id) VALUES (:creator, :message);"
 		);
 
+		while (!this.me) {
+			console.debug("dmsWorker", "Spinning until moderation's synced");
+			await sleep(5 * SECONDS);
+		}
+
 		let working = true;
 		while (working) {
 			let reachedEnd = false;
@@ -298,6 +411,12 @@ export class Bot {
 						":message": dm.private_message.id,
 					};
 
+					if (
+						dm.creator.id == this.me.local_user_view.person.id &&
+						dm.creator.instance_id == this.me.local_user_view.person.instance_id
+					)
+						continue;
+
 					const ret = await dmsCheckStmt.get<1>(dbObj);
 
 					if (ret) {
@@ -305,6 +424,9 @@ export class Bot {
 					}
 
 					console.debug("dmsWorker", "Found new DM", dm);
+
+					await this.handleDM(dm);
+
 					await dmsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_DMS_WORKER_WAIT_TIME);
 				}
@@ -331,23 +453,33 @@ export class Bot {
 		}
 	}
 
-	async periodicWorker() {
+	async fastPeriodicWorker() {
 		let working = true;
 		while (working) {
-			await sleep(PERIODIC_WORKER_WAIT_TIME);
+			await this.syncFollows();
+			await sleep(FAST_PERIODIC_WORKER_WAIT_TIME);
+		}
+	}
+	async slowPeriodicWorker() {
+		let working = true;
+		while (working) {
+			await sleep(SLOW_PERIODIC_WORKER_WAIT_TIME);
 
-			console.info("periodicWorker", "Optimizing database...");
+			console.info("slowPeriodicWorker", "Optimizing database...");
 			await this.db.exec(`
 				PRAGMA incremental_vacuum;
 				PRAGMA optimize;
 			`);
-
-			await this.syncFollows();
 		}
 	}
 
 	async start() {
-		await this.syncFollows();
-		await Promise.all([this.postsWorker(), this.commentsWorker(), this.dmsWorker(), this.periodicWorker()]);
+		await Promise.all([
+			this.postsWorker(),
+			this.commentsWorker(),
+			this.dmsWorker(),
+			this.slowPeriodicWorker(),
+			this.fastPeriodicWorker(),
+		]);
 	}
 }
