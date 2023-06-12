@@ -322,16 +322,16 @@ export class Bot {
 						post.community.instance_id,
 						post.community.id
 					);
-					if (!config) {
+
+					if (config) {
+						await config.handlePost(post, this);
+					} else {
 						console.warn(
 							"Community",
 							post.community.name,
 							"has not uploaded a configuration."
 						);
-						continue;
 					}
-
-					await config.handlePost(post, this);
 
 					await postsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_POSTS_WORKER_WAIT_TIME);
@@ -430,16 +430,16 @@ export class Bot {
 						comment.community.instance_id,
 						comment.community.id
 					);
-					if (!config) {
+
+					if (config) {
+						await config.handleComment(comment, this);
+					} else {
 						console.warn(
 							"Community",
 							comment.community.name,
 							"has not uploaded a configuration."
 						);
-						continue;
 					}
-
-					await config.handleComment(comment, this);
 
 					await commentsInsertStmt.run(dbObj);
 					await sleep(BETWEEN_COMMENTS_WORKER_WAIT_TIME);

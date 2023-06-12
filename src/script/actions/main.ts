@@ -253,9 +253,10 @@ export class PostTarget implements ActionTarget<PostView> {
 				typeof templatedMatcher.url == "string" ||
 				"regex" in templatedMatcher.url
 			) {
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 				const [match, reGroup] = matchText(
 					templatedMatcher.url,
+
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 					input.post.url!
 				); // fuck
 				if (!match) return [false, {}];
