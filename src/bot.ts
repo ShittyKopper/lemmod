@@ -11,6 +11,7 @@ const FETCH_LIMIT_MAX = 50;
 const POST_WORKER_WAIT_TIME = 30 * 60 * 1000; // secs
 const COMMENT_WORKER_WAIT_TIME = 15 * 60 * 1000; // secs
 const DM_WORKER_WAIT_TIME = 60 * 1000; // secs
+const PERIODIC_WORKER_WAIT_TIME = 60 * 60 * 1000; // secs
 
 export class Bot {
 	private lemmy: LemmyHttp;
@@ -130,8 +131,13 @@ export class Bot {
 	}
 
 	async dmsWorker() {
-		const dmsCheckStmt = await this.db.prepare("SELECT 1 FROM dms_checked WHERE creator_id = :creator;");
-		const dmsInsertStmt = await this.db.prepare("INSERT INTO dms_checked(creator_id) VALUES (:creator);");
+		const dmsCheckStmt = await this.db.prepare(
+			"SELECT 1 FROM dms_checked WHERE creator_id = :creator AND message_id = :message;"
+		);
+
+		const dmsInsertStmt = await this.db.prepare(
+			"INSERT INTO dms_checked(creator_id, message_id) VALUES (:creator, :message);"
+		);
 
 		let working = true;
 		while (working) {
@@ -150,14 +156,13 @@ export class Bot {
 				for (const dm of dms.private_messages) {
 					const dbObj = {
 						":creator": dm.creator.id,
+						":message": dm.private_message.id,
 					};
 
 					const ret = await dmsCheckStmt.get<1>(dbObj);
 
 					if (ret) {
-						console.debug("We already checked this DM. Assume we checked the older ones as well");
-						reachedEnd = true;
-						break;
+						continue;
 					}
 
 					console.debug("Found new DM", dm);
@@ -173,7 +178,20 @@ export class Bot {
 		}
 	}
 
+	async periodicWorker() {
+		let working = true;
+		while (working) {
+			await sleep(PERIODIC_WORKER_WAIT_TIME);
+
+			console.info("Optimizing database...");
+			await this.db.exec(`
+				PRAGMA incremental_vacuum;
+				PRAGMA optimize;
+			`);
+		}
+	}
+
 	async start() {
-		await Promise.all([this.postsWorker(), this.commentsWorker(), this.dmsWorker()]);
+		await Promise.all([this.postsWorker(), this.commentsWorker(), this.dmsWorker(), this.periodicWorker()]);
 	}
 }

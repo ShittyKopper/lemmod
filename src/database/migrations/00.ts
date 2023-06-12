@@ -18,6 +18,9 @@ export default async function (db: sqlite.Database) {
 
 		CREATE TABLE dms_checked (
 			creator_id INTEGER NOT NULL,
+			message_id INTEGER NOT NULL,
+
+			UNIQUE(creator_id, message_id) ON CONFLICT IGNORE
 		) STRICT;
 		
 		CREATE TABLE community_configs (

@@ -35,11 +35,5 @@ export async function initDB() {
 	console.info("Migrating the database...");
 	await migrate(db);
 
-	console.info("Optimizing the database...");
-	await db.exec(`
-		PRAGMA vacuum;
-		PRAGMA optimize;
-	`);
-
 	return db;
 }

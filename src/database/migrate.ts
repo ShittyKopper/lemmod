@@ -15,7 +15,7 @@ export async function migrate(db: sqlite.Database) {
 
 	console.info(`Will run ${migrations.length - ver} migrations.`);
 
-	await db.exec("BEGIN TRANSACTION;");
+	await db.exec("BEGIN;");
 	for (const [i, migration] of migrations.slice(ver).entries()) {
 		const migrateFn = (await migration).default;
 
