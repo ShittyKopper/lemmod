@@ -22,7 +22,7 @@ export async function initDB() {
 	});
 
 	// https://phiresky.github.io/blog/2020/sqlite-performance-tuning/
-	console.info("Configuring the database...");
+	console.info("initDB", "Configuring the database...");
 	await db.exec(`
 		PRAGMA journal_mode = wal;	
 		PRAGMA synchronous = normal;
@@ -32,7 +32,7 @@ export async function initDB() {
 		PRAGMA page_size = 32768;
 	`);
 
-	console.info("Migrating the database...");
+	console.info("initDB", "Migrating the database...");
 	await migrate(db);
 
 	return db;

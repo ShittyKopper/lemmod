@@ -1,7 +1,7 @@
 function required(variable: string): string {
 	const value = process.env[variable];
 	if (value == undefined) {
-		console.error(`Missing required environment variable $${variable}`);
+		console.error("config", "Missing required environment variable", variable);
 		process.exit(1);
 	}
 

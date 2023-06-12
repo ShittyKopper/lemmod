@@ -39,7 +39,7 @@ export class Bot {
 			let currentPage = 0;
 
 			while (!reachedEnd) {
-				console.log("Getting next", FETCH_LIMIT_MAX, "posts in page", currentPage);
+				console.info("postsWorker", "Getting next", FETCH_LIMIT_MAX, "posts in page", currentPage);
 
 				const posts = await this.lemmy.getPosts({
 					auth: this.jwt,
@@ -49,7 +49,7 @@ export class Bot {
 					page: currentPage,
 				});
 
-				console.debug(posts.posts.length, "posts to check");
+				console.debug("postsWorker", posts.posts.length, "posts to check");
 				for (const post of posts.posts) {
 					const dbObj = {
 						":instance": post.community.instance_id,
@@ -59,22 +59,27 @@ export class Bot {
 					const ret = await postsCheckStmt.get<1>(dbObj);
 
 					if (ret) {
-						console.debug("We already checked this post. Assume we checked the older ones as well");
+						console.debug(
+							"postsWorker",
+							"We already checked this post. Assume we checked the older ones as well"
+						);
 						reachedEnd = true;
 						break;
 					}
 
-					console.debug("Found new post", post);
+					console.debug("postsWorker", "Found new post", post);
 					await postsInsertStmt.run(dbObj);
 				}
 
 				if (reachedEnd) break;
 
-				console.debug("Checking next page");
+				console.debug("postsWorker", "Checking next page");
 				currentPage += 1;
 			}
 
 			await sleep(POST_WORKER_WAIT_TIME);
+			reachedEnd = false;
+			currentPage = 0;
 		}
 	}
 
@@ -93,7 +98,7 @@ export class Bot {
 			let currentPage = 0;
 
 			while (!reachedEnd) {
-				console.log("Getting next", FETCH_LIMIT_MAX, "comments in page", currentPage);
+				console.info("commentsWorker", "Getting next", FETCH_LIMIT_MAX, "comments in page", currentPage);
 				const comments = await this.lemmy.getComments({
 					auth: this.jwt,
 					sort: "New",
@@ -102,7 +107,7 @@ export class Bot {
 					page: 1,
 				});
 
-				console.debug(comments.comments.length, "comments to check");
+				console.debug("commentsWorker", comments.comments.length, "comments to check");
 				for (const comment of comments.comments) {
 					const dbObj = {
 						":instance": comment.community.instance_id,
@@ -112,21 +117,26 @@ export class Bot {
 					const ret = await commentsCheckStmt.get<1>(dbObj);
 
 					if (ret) {
-						console.debug("We already checked this comment. Assume we checked the older ones as well");
+						console.debug(
+							"commentsWorker",
+							"We already checked this comment. Assume we checked the older ones as well"
+						);
 						reachedEnd = true;
 						break;
 					}
 
-					console.debug("Found new comment", comment);
+					console.debug("commentsWorker", "Found new comment", comment);
 					await commentsInsertStmt.run(dbObj);
 				}
 
 				if (reachedEnd) break;
-				console.debug("Checking next page");
+				console.debug("commentsWorker", "Checking next page");
 				currentPage += 1;
 			}
 
 			await sleep(COMMENT_WORKER_WAIT_TIME);
+			reachedEnd = false;
+			currentPage = 0;
 		}
 	}
 
@@ -144,15 +154,20 @@ export class Bot {
 			let reachedEnd = false;
 			let currentPage = 0;
 
-			while (reachedEnd) {
-				console.log("Getting next", FETCH_LIMIT_MAX, "DMs in page", currentPage);
+			while (!reachedEnd) {
+				console.info("dmsWorker", "Getting next", FETCH_LIMIT_MAX, "DMs in page", currentPage);
 				const dms = await this.lemmy.getPrivateMessages({
 					auth: this.jwt,
 					limit: FETCH_LIMIT_MAX,
 					page: currentPage,
 				});
 
-				console.debug(dms.private_messages.length, "DMs to check");
+				console.debug("dmsWorker", dms.private_messages.length, "DMs to check");
+				if (dms.private_messages.length == 0) {
+					reachedEnd = true;
+					break;
+				}
+
 				for (const dm of dms.private_messages) {
 					const dbObj = {
 						":creator": dm.creator.id,
@@ -165,16 +180,18 @@ export class Bot {
 						continue;
 					}
 
-					console.debug("Found new DM", dm);
+					console.debug("dmsWorker", "Found new DM", dm);
 					await dmsInsertStmt.run(dbObj);
 				}
 
 				if (reachedEnd) break;
-				console.debug("Checking next page");
+				console.debug("dmsWorker", "Checking next page");
 				currentPage += 1;
 			}
 
 			await sleep(DM_WORKER_WAIT_TIME);
+			reachedEnd = false;
+			currentPage = 0;
 		}
 	}
 
@@ -183,7 +200,7 @@ export class Bot {
 		while (working) {
 			await sleep(PERIODIC_WORKER_WAIT_TIME);
 
-			console.info("Optimizing database...");
+			console.info("periodicWorker", "Optimizing database...");
 			await this.db.exec(`
 				PRAGMA incremental_vacuum;
 				PRAGMA optimize;
