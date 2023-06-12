@@ -8,9 +8,18 @@ const FETCH_LIMIT_MAX = 50;
 // we do need to take into account that we want to be almost instant with actions
 // while at the same time not hammering already struggling servers
 // assuming there will be more comments than posts
-const POST_WORKER_WAIT_TIME = 30 * 60 * 1000; // secs
+const POST_WORKER_WAIT_TIME = 10 * 60 * 1000; // secs
+const BETWEEN_POSTS_WORKER_WAIT_TIME = 10 * 1000; // secs
+const BETWEEN_POST_PAGES_WORKER_WAIT_TIME = 20 * 1000; // secs
+
 const COMMENT_WORKER_WAIT_TIME = 15 * 60 * 1000; // secs
+const BETWEEN_COMMENTS_WORKER_WAIT_TIME = 5 * 60 * 1000; // secs
+const BETWEEN_COMMENT_PAGES_WORKER_WAIT_TIME = 10 * 60 * 1000; // secs
+
 const DM_WORKER_WAIT_TIME = 60 * 1000; // secs
+const BETWEEN_DMS_WORKER_WAIT_TIME = 5 * 1000; // secs
+const BETWEEN_DM_PAGES_WORKER_WAIT_TIME = 10 * 1000; // secs
+
 const PERIODIC_WORKER_WAIT_TIME = 60 * 60 * 1000; // secs
 
 export class Bot {
@@ -69,12 +78,14 @@ export class Bot {
 
 					console.debug("postsWorker", "Found new post", post);
 					await postsInsertStmt.run(dbObj);
+					await sleep(BETWEEN_POSTS_WORKER_WAIT_TIME);
 				}
 
 				if (reachedEnd) break;
 
 				console.debug("postsWorker", "Checking next page");
 				currentPage += 1;
+				await sleep(BETWEEN_POST_PAGES_WORKER_WAIT_TIME);
 			}
 
 			await sleep(POST_WORKER_WAIT_TIME);
@@ -127,11 +138,13 @@ export class Bot {
 
 					console.debug("commentsWorker", "Found new comment", comment);
 					await commentsInsertStmt.run(dbObj);
+					await sleep(BETWEEN_COMMENTS_WORKER_WAIT_TIME);
 				}
 
 				if (reachedEnd) break;
 				console.debug("commentsWorker", "Checking next page");
 				currentPage += 1;
+				await sleep(BETWEEN_COMMENT_PAGES_WORKER_WAIT_TIME);
 			}
 
 			await sleep(COMMENT_WORKER_WAIT_TIME);
@@ -182,11 +195,13 @@ export class Bot {
 
 					console.debug("dmsWorker", "Found new DM", dm);
 					await dmsInsertStmt.run(dbObj);
+					await sleep(BETWEEN_DMS_WORKER_WAIT_TIME);
 				}
 
 				if (reachedEnd) break;
 				console.debug("dmsWorker", "Checking next page");
 				currentPage += 1;
+				await sleep(BETWEEN_DM_PAGES_WORKER_WAIT_TIME);
 			}
 
 			await sleep(DM_WORKER_WAIT_TIME);
