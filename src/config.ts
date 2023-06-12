@@ -17,9 +17,4 @@ export default {
 		username: required("USERNAME"),
 		password: required("PASSWORD"),
 	},
-
-	instances: {
-		allowed: process.env.ALLOW_INSTANCES,
-		denied: process.env.DENY_INSTANCES,
-	},
 };
