@@ -1,5 +1,6 @@
 import { CommentView, PostView } from "lemmy-js-client";
 import { Bot } from "../../bot.js";
+import { sleep } from "../../util.js";
 import { Configuration } from "../main.js";
 import { Action, ActionTarget, CommentTarget } from "./main.js";
 
@@ -23,10 +24,11 @@ export class ReplyAction implements Action<PostView | CommentView> {
 			parent_id: target instanceof CommentTarget ? target.targetData().comment.id : undefined,
 		});
 
-		await bot.lemmy.distinguishComment({
-			auth: bot.jwt,
-			comment_id: comment.comment_view.comment.id,
-			distinguished: true,
-		});
+		// doesn't work
+		// await bot.lemmy.distinguishComment({
+		// 	auth: bot.jwt,
+		// 	comment_id: comment.comment_view.comment.id,
+		// 	distinguished: true,
+		// });
 	}
 }

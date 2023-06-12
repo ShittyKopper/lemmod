@@ -54,7 +54,12 @@ class Script {
 		if (!match) return;
 
 		const actions = this.actions.map(act => act.templateize(this.cfg, templateVariables).execute(bot, this.target));
-		await Promise.all(actions);
+
+		try {
+			await Promise.all(actions);
+		} catch (e) {
+			console.error("handlePost", "Error executing actions", e);
+		}
 	}
 
 	public async handleComment(comment: CommentView, bot: Bot) {
@@ -62,7 +67,12 @@ class Script {
 		if (!match) return;
 
 		const actions = this.actions.map(act => act.templateize(this.cfg, templateVariables).execute(bot, this.target));
-		await Promise.all(actions);
+
+		try {
+			await Promise.all(actions);
+		} catch (e) {
+			console.error("handleComment", "Error executing actions", e);
+		}
 	}
 }
 
