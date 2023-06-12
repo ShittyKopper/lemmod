@@ -4,9 +4,14 @@ import RE2 from "re2";
 import { Bot } from "../../bot.js";
 import { Configuration } from "../main.js";
 import { OnComment, OnPost, Text } from "../schema.js";
+import { BanAction } from "./ban.js";
 import { DeleteAction } from "./delete.js";
 import { LockAction } from "./lock.js";
 import { MessageAction } from "./message.js";
+import { PinAction } from "./pin.js";
+import { RenameAction } from "./rename.js";
+import { ReplyAction } from "./reply.js";
+import { ReportAction } from "./report.js";
 
 export interface ActionTarget<TargetData> {
 	match(input: unknown): [boolean, { [regexGroupName: string]: string }];
@@ -299,14 +304,29 @@ export class CommentTarget implements ActionTarget<CommentView> {
 
 export function getActionByName(name: string): unknown {
 	switch (name) {
+		case "ban":
+			return BanAction;
+
 		case "delete":
 			return DeleteAction;
+
+		case "lock":
+			return LockAction;
 
 		case "message":
 			return MessageAction;
 
-		case "lock":
-			return LockAction;
+		case "pin":
+			return PinAction;
+
+		case "rename":
+			return RenameAction;
+
+		case "reply":
+			return ReplyAction;
+
+		case "report":
+			return ReportAction;
 
 		default:
 			throw `Unknown action "${name}"`;

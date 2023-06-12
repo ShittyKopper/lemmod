@@ -70,7 +70,8 @@ variables:
 
 Variables are simple key:value "shortcuts" intended to cut down on repeated text.
 There really isn't anything special here except for the fact that you can't use
-the names `post`, `comment`, or `creator` as variable names, as they're reserved.
+the names `post` or `comment` as variable names, as they're reserved for information
+gathered from the post or comment that is being actioned upon.
 
 ```yml
 script:
@@ -90,7 +91,7 @@ url:
 ```
 
 This part will match a URL with that exact domain. You can also use regular
-expressions, and variables here via mustache syntax (like `{{ variable }}`)
+expressions, and variables via mustache syntax (like `{{ variable }}`)
 
 ```yaml
 actions:
@@ -104,6 +105,10 @@ tells it what to do to the post. In this case, we `delete:` it, and send a
 
 You can only run an action once, so multiple `message:` blocks or whatever are
 not allowed.
+
+**Notice:** If you do decide to use this configuration, know that the bot will
+not be able to remove stuff created by moderators. If you're just testing, try
+`lock:` instead.
 
 ## Configuration Reference
 
@@ -123,8 +128,11 @@ script:
           body:
               # regex: can be used to match regexes
               regex:
-                  match: JS "flavored" regular expression here
-                  save_groups: # Named groups only. Allows for usage in actions later on
+                  match: RE2 "flavored" regular expression here
+
+                  # Named groups only!
+                  save_groups:
+                      # Will expose group to actions as variable {{group}}
                       - group
 
           # Type: boolean. true or false
@@ -172,9 +180,15 @@ script:
 
       actions:
           # Common to posts & comments
+          delete: # Delete has no arguments
 
-          delete: Delete reason
-          ban: Ban reason
+          # Type: text (indefinite ban) or object with reason & expires
+          ban:
+              # Type: text
+              reason: Ban reason
+
+              # Type: number in seconds
+              expires:
 
           message: This message will be DMd to the creator.
           report: Will be reported with this message.
