@@ -85,6 +85,16 @@ export class Bot {
 
 				console.debug("postsWorker", "Checking next page");
 				currentPage += 1;
+
+				if (currentPage == 5) {
+					console.warn(
+						"postsWorker",
+						"Checked 5 pages without hitting a pre-existing post. Something's off. Assuming this is the end"
+					);
+					reachedEnd = true;
+					break;
+				}
+
 				await sleep(BETWEEN_POST_PAGES_WORKER_WAIT_TIME);
 			}
 
@@ -144,6 +154,16 @@ export class Bot {
 				if (reachedEnd) break;
 				console.debug("commentsWorker", "Checking next page");
 				currentPage += 1;
+
+				if (currentPage == 5) {
+					console.warn(
+						"commentsWorker",
+						"Checked 5 pages without hitting a pre-existing comment. Something's off. Assuming this is the end"
+					);
+					reachedEnd = true;
+					break;
+				}
+
 				await sleep(BETWEEN_COMMENT_PAGES_WORKER_WAIT_TIME);
 			}
 
@@ -201,6 +221,16 @@ export class Bot {
 				if (reachedEnd) break;
 				console.debug("dmsWorker", "Checking next page");
 				currentPage += 1;
+
+				if (currentPage == 5) {
+					console.warn(
+						"commentsWorker",
+						"Checked 5 pages without hitting a pre-existing DM. Something's off. Assuming this is the end"
+					);
+					reachedEnd = true;
+					break;
+				}
+
 				await sleep(BETWEEN_DM_PAGES_WORKER_WAIT_TIME);
 			}
 
